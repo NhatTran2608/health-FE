@@ -25,6 +25,7 @@ export default function DashboardPage() {
     const [dashboardData, setDashboardData] = useState(null);
     const [latestRecord, setLatestRecord] = useState(null);
     const [todayReminders, setTodayReminders] = useState([]);
+    const [totalReminders, setTotalReminders] = useState(0);
 
     // Lấy dữ liệu dashboard khi load
     useEffect(() => {
@@ -36,13 +37,14 @@ export default function DashboardPage() {
             setLoading(true);
 
             // Gọi song song các API
-            const [dashboardRes, recordsRes, remindersRes] = await Promise.all([
+            const [dashboardRes, recordsRes, remindersRes, allRemindersRes] = await Promise.all([
                 reportService.getDashboard().catch(() => null),
                 healthRecordService.getAll({ limit: 1 }).catch(() => null),
-                reminderService.getAll({ limit: 5, isActive: true }).catch(() => null)
+                reminderService.getAll({ limit: 5, isActive: true }).catch(() => null),
+                reminderService.getAll({ limit: 1 }).catch(() => null) // Just to get total count
             ]);
 
-            // Dashboard: { success, message, data: dashboardStats }
+            // Dashboard: { success, message, data: { healthSummary: { totalRecords }, chatSummary: { totalQuestions } } }
             if (dashboardRes?.data) {
                 setDashboardData(dashboardRes.data);
             }
@@ -57,6 +59,11 @@ export default function DashboardPage() {
             // => remindersRes.data là mảng reminders
             if (remindersRes?.data) {
                 setTodayReminders(remindersRes.data);
+            }
+
+            // Get total reminders count from pagination
+            if (allRemindersRes?.pagination) {
+                setTotalReminders(allRemindersRes.pagination.totalItems || 0);
             }
         } catch (error) {
             toast.error('Không thể tải dữ liệu dashboard');
@@ -88,21 +95,21 @@ export default function DashboardPage() {
                 <StatCard
                     icon="📊"
                     label="Hồ sơ sức khỏe"
-                    value={dashboardData?.totalRecords || 0}
+                    value={dashboardData?.healthSummary?.totalRecords || 0}
                     change="+2 tuần này"
                     changeType="positive"
                 />
                 <StatCard
                     icon="💬"
                     label="Cuộc tư vấn"
-                    value={dashboardData?.totalChats || 0}
+                    value={dashboardData?.chatSummary?.totalQuestions || 0}
                     change="+5 tuần này"
                     changeType="positive"
                 />
                 <StatCard
                     icon="🔔"
                     label="Nhắc nhở"
-                    value={dashboardData?.totalReminders || 0}
+                    value={totalReminders}
                 />
                 <StatCard
                     icon="⚖️"

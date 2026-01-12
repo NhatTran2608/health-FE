@@ -43,14 +43,19 @@ export default function ChatbotPage() {
     const messagesEndRef = useRef(null);
     const inputRef = useRef(null);
 
-    // Scroll xuống cuối khi có tin nhắn mới
-    const scrollToBottom = () => {
-        messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
+    // Scroll xuống cuối
+    const scrollToBottom = (smooth = true) => {
+        if (messagesEndRef.current) {
+            messagesEndRef.current.scrollIntoView({ behavior: smooth ? 'smooth' : 'auto' });
+        }
     };
 
+    // Scroll to bottom khi loading xong (initial load)
     useEffect(() => {
-        scrollToBottom();
-    }, [messages]);
+        if (!loading && messages.length > 0) {
+            setTimeout(() => scrollToBottom(false), 100);
+        }
+    }, [loading]);
 
     // Lấy lịch sử chat khi load
     useEffect(() => {
@@ -67,12 +72,14 @@ export default function ChatbotPage() {
             // BE trả về: { success, message, data: chats[], pagination }
             // => response.data là mảng chats
             if (response.data && response.data.length > 0) {
-                // Chuyển đổi lịch sử thành dạng messages
-                const msgs = response.data.flatMap(chat => [
+                // Backend trả về chats theo thứ tự mới nhất trước (createdAt: -1)
+                // Cần reverse để có thứ tự cũ nhất trước, sau đó flatMap để có user -> bot
+                const reversedData = [...response.data].reverse();
+                const msgs = reversedData.flatMap(chat => [
                     { type: 'user', content: chat.question, time: chat.createdAt, id: chat._id },
                     { type: 'bot', content: chat.answer, time: chat.createdAt, rating: chat.rating, id: chat._id }
                 ]);
-                setMessages(msgs.reverse());
+                setMessages(msgs);
                 setHistory(response.data);
             }
         } catch (error) {
@@ -97,6 +104,9 @@ export default function ChatbotPage() {
             content: userMessage,
             time: new Date().toISOString()
         }]);
+        
+        // Scroll to bottom khi user gửi tin nhắn
+        setTimeout(() => scrollToBottom(true), 50);
 
         try {
             setSending(true);
@@ -112,6 +122,8 @@ export default function ChatbotPage() {
                     time: new Date().toISOString(),
                     id: response.data._id
                 }]);
+                // Scroll to bottom sau khi bot trả lời
+                setTimeout(() => scrollToBottom(true), 100);
             }
         } catch (error) {
             toast.error('Không thể gửi tin nhắn. Vui lòng thử lại.');
@@ -195,11 +207,11 @@ export default function ChatbotPage() {
                 </div>
             </div>
 
-            <div className="flex-1 flex gap-4 overflow-hidden">
+            <div className="flex-1 flex gap-4 overflow-hidden min-h-0">
                 {/* Chat area */}
-                <Card className="flex-1 flex flex-col overflow-hidden">
+                <div className="flex-1 flex flex-col bg-white rounded-xl shadow-md overflow-hidden min-h-0">
                     {/* Messages */}
-                    <div className="flex-1 overflow-y-auto p-4 space-y-4">
+                    <div className="flex-1 overflow-y-auto p-4 space-y-4 min-h-0">
                         {messages.length === 0 ? (
                             <div className="h-full flex flex-col items-center justify-center text-center">
                                 <FiMessageSquare size={48} className="text-gray-300 mb-4" />
@@ -320,7 +332,7 @@ export default function ChatbotPage() {
                             Lưu ý: Đây chỉ là tư vấn tham khảo, không thay thế khám bác sĩ
                         </p>
                     </div>
-                </Card>
+                </div>
 
                 {/* Sidebar lịch sử */}
                 {showHistory && (

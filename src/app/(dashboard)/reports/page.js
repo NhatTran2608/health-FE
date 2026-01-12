@@ -17,7 +17,7 @@ import {
     FiChevronDown
 } from 'react-icons/fi';
 import { Card, Loading, LineChart, BarChart } from '@/components';
-import { reportService } from '@/services';
+import { reportService, healthRecordService, chatbotService } from '@/services';
 import { formatDate, calculateBMI, getBMIStatus } from '@/utils';
 
 export default function ReportsPage() {
@@ -38,18 +38,180 @@ export default function ReportsPage() {
     const fetchReports = async () => {
         try {
             setLoading(true);
-            const [healthRes, chatbotRes] = await Promise.all([
-                reportService.getHealthReport({ period }).catch(() => null),
-                reportService.getChatbotReport({ period }).catch(() => null)
+
+            // Chuyển đổi period sang startDate và endDate
+            const endDate = new Date();
+            const startDate = new Date();
+            
+            switch (period) {
+                case 'week':
+                    startDate.setDate(endDate.getDate() - 7);
+                    break;
+                case 'month':
+                    startDate.setDate(endDate.getDate() - 30);
+                    break;
+                case 'year':
+                    startDate.setFullYear(endDate.getFullYear() - 1);
+                    break;
+            }
+
+            const dateParams = {
+                startDate: startDate.toISOString().split('T')[0],
+                endDate: endDate.toISOString().split('T')[0]
+            };
+
+            // Gọi các API
+            // Fetch records without date filtering để có dữ liệu cho charts
+            const [healthRes, chatbotRes, recordsRes, chatHistoryRes] = await Promise.all([
+                reportService.getHealthReport(dateParams).catch(() => null),
+                reportService.getChatbotReport(dateParams).catch(() => null),
+                healthRecordService.getAll({ limit: 100 }).catch(() => null), // Fetch all records for charts
+                chatbotService.getHistory({ limit: 100 }).catch(() => null)
             ]);
 
-            if (healthRes?.data) {
-                setHealthData(healthRes.data);
+            // Transform health data
+            const recordsArray = recordsRes?.data || [];
+            const activeDaysSet = new Set(
+                recordsArray.map(record => new Date(record.createdAt).toDateString())
+            );
+
+            // Tính toán từ records nếu có
+            const weightHistory = recordsArray
+                .filter(r => r.weight)
+                .map(r => ({
+                    date: r.createdAt,
+                    weight: r.weight
+                }))
+                .sort((a, b) => new Date(a.date) - new Date(b.date));
+
+            const bmiHistory = recordsArray
+                .filter(r => r.weight && r.height)
+                .map(r => ({
+                    date: r.createdAt,
+                    bmi: parseFloat(calculateBMI(r.weight, r.height))
+                }))
+                .filter(d => d.bmi && !isNaN(d.bmi))
+                .sort((a, b) => new Date(a.date) - new Date(b.date));
+
+            const bloodPressureHistory = recordsArray
+                .filter(r => r.bloodPressure?.systolic && r.bloodPressure?.diastolic)
+                .map(r => ({
+                    date: r.createdAt,
+                    systolic: r.bloodPressure.systolic,
+                    diastolic: r.bloodPressure.diastolic
+                }))
+                .sort((a, b) => new Date(a.date) - new Date(b.date));
+
+            // Tính average weight
+            let averageWeight = null;
+            if (weightHistory.length > 0) {
+                const weights = weightHistory.map(d => d.weight);
+                averageWeight = weights.reduce((a, b) => a + b, 0) / weights.length;
             }
+
+            // Tạo health data - ưu tiên backend data, fallback về records
+            const transformedHealthData = {
+                totalRecords: healthRes?.data?.stats?.totalRecords || recordsArray.length,
+                averageWeight: healthRes?.data?.stats?.weight?.avg 
+                    ? parseFloat(healthRes.data.stats.weight.avg) 
+                    : averageWeight,
+                activeDays: activeDaysSet.size,
+                weightHistory: (healthRes?.data?.chartData?.weight || []).length > 0
+                    ? healthRes.data.chartData.weight.map(d => ({
+                        date: d.date,
+                        weight: d.value
+                    }))
+                    : weightHistory,
+                bmiHistory: (healthRes?.data?.chartData?.bmi || []).length > 0
+                    ? healthRes.data.chartData.bmi.map(d => ({
+                        date: d.date,
+                        bmi: parseFloat(d.value)
+                    }))
+                    : bmiHistory,
+                bloodPressureHistory: (healthRes?.data?.chartData?.bloodPressure || []).length > 0
+                    ? healthRes.data.chartData.bloodPressure.map(d => ({
+                        date: d.date,
+                        systolic: d.systolic,
+                        diastolic: d.diastolic
+                    }))
+                    : bloodPressureHistory,
+                records: recordsArray
+            };
+            setHealthData(transformedHealthData);
+
+            // Transform chatbot data
+            const chatHistoryArray = chatHistoryRes?.data || [];
+            
+            // Tính average rating từ chat history
+            let averageRating = 0;
+            if (chatHistoryArray.length > 0) {
+                const ratings = chatHistoryArray
+                    .filter(chat => chat.rating)
+                    .map(chat => chat.rating);
+                if (ratings.length > 0) {
+                    averageRating = ratings.reduce((a, b) => a + b, 0) / ratings.length;
+                }
+            }
+
+            // Tạo recent activity từ chat history nếu không có từ API
+            const recentActivityFromHistory = chatHistoryArray
+                .reduce((acc, chat) => {
+                    const date = new Date(chat.createdAt).toISOString().split('T')[0];
+                    const existing = acc.find(item => item.date === date);
+                    if (existing) {
+                        existing.count++;
+                    } else {
+                        acc.push({ date, count: 1 });
+                    }
+                    return acc;
+                }, [])
+                .sort((a, b) => b.date.localeCompare(a.date))
+                .slice(0, 5);
+
+            // Tạo popular topics từ chat history
+            const popularTopicsFromHistory = chatHistoryArray
+                .reduce((acc, chat) => {
+                    const category = chat.category || 'other';
+                    const existing = acc.find(item => item.name === category);
+                    if (existing) {
+                        existing.count++;
+                    } else {
+                        acc.push({ name: category, count: 1 });
+                    }
+                    return acc;
+                }, [])
+                .sort((a, b) => b.count - a.count);
+
             if (chatbotRes?.data) {
-                setChatbotData(chatbotRes.data);
+                const backendData = chatbotRes.data;
+                const transformedChatbotData = {
+                    totalChats: backendData.summary?.totalQuestions || chatHistoryArray.length,
+                    recentActivity: (backendData.dailyStats || []).length > 0
+                        ? backendData.dailyStats.map(d => ({
+                            date: d.date,
+                            count: d.count
+                        }))
+                        : recentActivityFromHistory,
+                    popularTopics: (backendData.categoryStats || []).length > 0
+                        ? backendData.categoryStats.map(item => ({
+                            name: item.category,
+                            count: item.count
+                        }))
+                        : popularTopicsFromHistory,
+                    averageRating: averageRating
+                };
+                setChatbotData(transformedChatbotData);
+            } else {
+                // Nếu không có dữ liệu từ report, tạo từ chat history
+                setChatbotData({
+                    totalChats: chatHistoryArray.length,
+                    recentActivity: recentActivityFromHistory,
+                    popularTopics: popularTopicsFromHistory,
+                    averageRating: averageRating
+                });
             }
         } catch (error) {
+            console.error('Error fetching reports:', error);
             toast.error('Không thể tải dữ liệu báo cáo');
         } finally {
             setLoading(false);

@@ -29,6 +29,13 @@ const reportService = {
      */
     getDashboard: async () => {
         return await api.get('/reports/dashboard');
+    },
+
+    /**
+     * Lấy thống kê tổng thể cho admin (tất cả users)
+     */
+    getAdminStats: async () => {
+        return await api.get('/reports/admin/stats');
     }
 };
 

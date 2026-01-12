@@ -38,16 +38,27 @@ export default function AdminDashboardPage() {
         try {
             setLoading(true);
 
-            // Lấy danh sách users
-            const usersRes = await userService.getAllUsers({ page: 1, limit: 5 });
+            // Gọi song song các API
+            const [usersRes, adminStatsRes] = await Promise.all([
+                userService.getAllUsers({ page: 1, limit: 5 }).catch(() => null),
+                reportService.getAdminStats().catch(() => null)
+            ]);
 
-            if (usersRes.data) {
+            if (usersRes?.data) {
                 setRecentUsers(usersRes.data);
                 setStats(prev => ({ ...prev, totalUsers: usersRes.pagination?.totalItems || 0 }));
             }
 
-            // Có thể thêm các API khác để lấy stats tổng thể
+            if (adminStatsRes?.data) {
+                setStats(prev => ({
+                    ...prev,
+                    totalRecords: adminStatsRes.data.totalHealthRecords || 0,
+                    totalChats: adminStatsRes.data.totalChatQuestions || 0,
+                    totalReminders: adminStatsRes.data.totalActiveReminders || 0
+                }));
+            }
         } catch (error) {
+            console.error('Error fetching admin data:', error);
             toast.error('Không thể tải dữ liệu quản trị');
         } finally {
             setLoading(false);

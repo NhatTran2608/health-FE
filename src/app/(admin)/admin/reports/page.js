@@ -17,8 +17,9 @@ import {
     FiBell,
     FiCalendar
 } from 'react-icons/fi';
-import { Card, Loading } from '@/components';
-import { userService } from '@/services';
+import { Card, Loading, LineChart, BarChart } from '@/components';
+import { userService, reportService } from '@/services';
+import { formatDate } from '@/utils';
 
 export default function AdminReportsPage() {
     const [loading, setLoading] = useState(true);
@@ -29,6 +30,10 @@ export default function AdminReportsPage() {
         totalChats: 0,
         totalReminders: 0
     });
+    const [chartData, setChartData] = useState({
+        userGrowth: [],
+        dailyActivity: []
+    });
 
     useEffect(() => {
         fetchStats();
@@ -38,15 +43,35 @@ export default function AdminReportsPage() {
         try {
             setLoading(true);
 
-            // Lấy thống kê users
-            const usersRes = await userService.getAllUsers({ page: 1, limit: 1 });
-            if (usersRes.pagination) {
+            // Gọi song song các API
+            const [usersRes, adminStatsRes] = await Promise.all([
+                userService.getAllUsers({ page: 1, limit: 1 }).catch(() => null),
+                reportService.getAdminStats().catch(() => null)
+            ]);
+
+            if (usersRes?.pagination) {
                 setStats(prev => ({
                     ...prev,
                     totalUsers: usersRes.pagination.totalItems || 0
                 }));
             }
+
+            if (adminStatsRes?.data) {
+                setStats(prev => ({
+                    ...prev,
+                    totalRecords: adminStatsRes.data.totalHealthRecords || 0,
+                    totalChats: adminStatsRes.data.totalChatQuestions || 0,
+                    totalReminders: adminStatsRes.data.totalActiveReminders || 0
+                }));
+                
+                // Set chart data
+                setChartData({
+                    userGrowth: adminStatsRes.data.userGrowth || [],
+                    dailyActivity: adminStatsRes.data.dailyActivity || []
+                });
+            }
         } catch (error) {
+            console.error('Error fetching admin reports:', error);
             toast.error('Không thể tải dữ liệu báo cáo');
         } finally {
             setLoading(false);
@@ -127,24 +152,58 @@ export default function AdminReportsPage() {
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
                 {/* User Growth */}
                 <Card title="Tăng trưởng người dùng">
-                    <div className="h-64 flex items-center justify-center text-gray-400">
-                        <div className="text-center">
-                            <FiTrendingUp size={48} className="mx-auto mb-4 opacity-50" />
-                            <p>Biểu đồ tăng trưởng người dùng</p>
-                            <p className="text-sm">Đang phát triển...</p>
+                    {chartData.userGrowth.length > 0 ? (
+                        <div className="h-64">
+                            <LineChart
+                                labels={chartData.userGrowth.map(item => formatDate(item.date, 'date'))}
+                                datasets={[{
+                                    label: 'Người dùng mới',
+                                    data: chartData.userGrowth.map(item => item.count),
+                                    color: '#3B82F6',
+                                    bgColor: 'rgba(59, 130, 246, 0.1)'
+                                }]}
+                                height={250}
+                            />
                         </div>
-                    </div>
+                    ) : (
+                        <div className="h-64 flex items-center justify-center text-gray-400">
+                            <div className="text-center">
+                                <FiTrendingUp size={48} className="mx-auto mb-4 opacity-50" />
+                                <p>Chưa có dữ liệu</p>
+                            </div>
+                        </div>
+                    )}
                 </Card>
 
                 {/* Activity Chart */}
                 <Card title="Hoạt động theo ngày">
-                    <div className="h-64 flex items-center justify-center text-gray-400">
-                        <div className="text-center">
-                            <FiCalendar size={48} className="mx-auto mb-4 opacity-50" />
-                            <p>Biểu đồ hoạt động</p>
-                            <p className="text-sm">Đang phát triển...</p>
+                    {chartData.dailyActivity.length > 0 ? (
+                        <div className="h-64">
+                            <BarChart
+                                labels={chartData.dailyActivity.map(item => formatDate(item.date, 'date'))}
+                                datasets={[
+                                    {
+                                        label: 'Hồ sơ sức khỏe',
+                                        data: chartData.dailyActivity.map(item => item.healthRecords),
+                                        color: '#10B981'
+                                    },
+                                    {
+                                        label: 'Cuộc tư vấn',
+                                        data: chartData.dailyActivity.map(item => item.chats),
+                                        color: '#8B5CF6'
+                                    }
+                                ]}
+                                height={250}
+                            />
                         </div>
-                    </div>
+                    ) : (
+                        <div className="h-64 flex items-center justify-center text-gray-400">
+                            <div className="text-center">
+                                <FiCalendar size={48} className="mx-auto mb-4 opacity-50" />
+                                <p>Chưa có dữ liệu</p>
+                            </div>
+                        </div>
+                    )}
                 </Card>
             </div>
 
