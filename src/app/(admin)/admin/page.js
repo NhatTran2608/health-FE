@@ -15,7 +15,10 @@ import {
     FiMessageSquare,
     FiBell,
     FiTrendingUp,
-    FiShield
+    FiShield,
+    FiTarget,
+    FiDroplet,
+    FiMoon
 } from 'react-icons/fi';
 import { Card, StatCard, Loading } from '@/components';
 import { userService, reportService } from '@/services';
@@ -26,7 +29,11 @@ export default function AdminDashboardPage() {
         totalUsers: 0,
         totalRecords: 0,
         totalChats: 0,
-        totalReminders: 0
+        totalReminders: 0,
+        healthGoals: { total: 0, active: 0, completed: 0 },
+        waterIntake: { totalRecords: 0, totalLiters: 0 },
+        exerciseLog: { totalRecords: 0, totalDuration: 0, totalCalories: 0 },
+        sleepTracker: { totalRecords: 0, averageSleepHours: 0 }
     });
     const [recentUsers, setRecentUsers] = useState([]);
 
@@ -54,7 +61,11 @@ export default function AdminDashboardPage() {
                     ...prev,
                     totalRecords: adminStatsRes.data.totalHealthRecords || 0,
                     totalChats: adminStatsRes.data.totalChatQuestions || 0,
-                    totalReminders: adminStatsRes.data.totalActiveReminders || 0
+                    totalReminders: adminStatsRes.data.totalActiveReminders || 0,
+                    healthGoals: adminStatsRes.data.healthGoals || { total: 0, active: 0, completed: 0 },
+                    waterIntake: adminStatsRes.data.waterIntake || { totalRecords: 0, totalLiters: 0 },
+                    exerciseLog: adminStatsRes.data.exerciseLog || { totalRecords: 0, totalDuration: 0, totalCalories: 0 },
+                    sleepTracker: adminStatsRes.data.sleepTracker || { totalRecords: 0, averageSleepHours: 0 }
                 }));
             }
         } catch (error) {
@@ -110,6 +121,41 @@ export default function AdminDashboardPage() {
                     change="Toàn hệ thống"
                     changeType="neutral"
                 />
+            </div>
+
+            {/* New Features Stats */}
+            <div className="mb-8">
+                <h2 className="text-xl font-semibold text-gray-800 mb-4">Thống kê tính năng mới</h2>
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+                    <StatCard
+                        icon="🎯"
+                        label="Mục tiêu sức khỏe"
+                        value={stats.healthGoals.total}
+                        change={`${stats.healthGoals.active} đang thực hiện, ${stats.healthGoals.completed} hoàn thành`}
+                        changeType="neutral"
+                    />
+                    <StatCard
+                        icon="💧"
+                        label="Theo dõi nước uống"
+                        value={stats.waterIntake.totalRecords}
+                        change={`Tổng: ${stats.waterIntake.totalLiters}L`}
+                        changeType="neutral"
+                    />
+                    <StatCard
+                        icon="🏃"
+                        label="Nhật ký tập luyện"
+                        value={stats.exerciseLog.totalRecords}
+                        change={`${Math.round(stats.exerciseLog.totalDuration / 60)}h tập, ${stats.exerciseLog.totalCalories} cal`}
+                        changeType="neutral"
+                    />
+                    <StatCard
+                        icon="😴"
+                        label="Theo dõi giấc ngủ"
+                        value={stats.sleepTracker.totalRecords}
+                        change={`TB: ${stats.sleepTracker.averageSleepHours}h/đêm`}
+                        changeType="neutral"
+                    />
+                </div>
             </div>
 
             {/* Main Content */}

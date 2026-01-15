@@ -15,7 +15,10 @@ import {
     FiActivity,
     FiMessageSquare,
     FiBell,
-    FiCalendar
+    FiCalendar,
+    FiTarget,
+    FiDroplet,
+    FiMoon
 } from 'react-icons/fi';
 import { Card, Loading, LineChart, BarChart } from '@/components';
 import { userService, reportService } from '@/services';
@@ -28,7 +31,11 @@ export default function AdminReportsPage() {
         newUsersThisWeek: 0,
         totalRecords: 0,
         totalChats: 0,
-        totalReminders: 0
+        totalReminders: 0,
+        healthGoals: { total: 0, active: 0, completed: 0 },
+        waterIntake: { totalRecords: 0, totalLiters: 0 },
+        exerciseLog: { totalRecords: 0, totalDuration: 0, totalCalories: 0 },
+        sleepTracker: { totalRecords: 0, averageSleepHours: 0 }
     });
     const [chartData, setChartData] = useState({
         userGrowth: [],
@@ -61,7 +68,11 @@ export default function AdminReportsPage() {
                     ...prev,
                     totalRecords: adminStatsRes.data.totalHealthRecords || 0,
                     totalChats: adminStatsRes.data.totalChatQuestions || 0,
-                    totalReminders: adminStatsRes.data.totalActiveReminders || 0
+                    totalReminders: adminStatsRes.data.totalActiveReminders || 0,
+                    healthGoals: adminStatsRes.data.healthGoals || { total: 0, active: 0, completed: 0 },
+                    waterIntake: adminStatsRes.data.waterIntake || { totalRecords: 0, totalLiters: 0 },
+                    exerciseLog: adminStatsRes.data.exerciseLog || { totalRecords: 0, totalDuration: 0, totalCalories: 0 },
+                    sleepTracker: adminStatsRes.data.sleepTracker || { totalRecords: 0, averageSleepHours: 0 }
                 }));
                 
                 // Set chart data
@@ -145,6 +156,68 @@ export default function AdminReportsPage() {
                         </div>
                     </div>
                     <p className="text-sm text-gray-500 mt-2">Đang hoạt động</p>
+                </div>
+            </div>
+
+            {/* New Features Stats */}
+            <div className="mb-8">
+                <h2 className="text-xl font-semibold text-gray-800 mb-4">Thống kê tính năng mới</h2>
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+                    <div className="bg-white rounded-xl p-6 shadow-md">
+                        <div className="flex items-center justify-between">
+                            <div>
+                                <p className="text-gray-500 text-sm">Mục tiêu sức khỏe</p>
+                                <p className="text-3xl font-bold text-gray-800">{stats.healthGoals.total}</p>
+                            </div>
+                            <div className="w-12 h-12 bg-pink-100 rounded-full flex items-center justify-center">
+                                <FiTarget className="text-pink-600" size={24} />
+                            </div>
+                        </div>
+                        <p className="text-sm text-gray-500 mt-2">
+                            {stats.healthGoals.active} đang thực hiện • {stats.healthGoals.completed} hoàn thành
+                        </p>
+                    </div>
+
+                    <div className="bg-white rounded-xl p-6 shadow-md">
+                        <div className="flex items-center justify-between">
+                            <div>
+                                <p className="text-gray-500 text-sm">Theo dõi nước uống</p>
+                                <p className="text-3xl font-bold text-gray-800">{stats.waterIntake.totalRecords}</p>
+                            </div>
+                            <div className="w-12 h-12 bg-cyan-100 rounded-full flex items-center justify-center">
+                                <FiDroplet className="text-cyan-600" size={24} />
+                            </div>
+                        </div>
+                        <p className="text-sm text-gray-500 mt-2">Tổng: {stats.waterIntake.totalLiters}L nước</p>
+                    </div>
+
+                    <div className="bg-white rounded-xl p-6 shadow-md">
+                        <div className="flex items-center justify-between">
+                            <div>
+                                <p className="text-gray-500 text-sm">Nhật ký tập luyện</p>
+                                <p className="text-3xl font-bold text-gray-800">{stats.exerciseLog.totalRecords}</p>
+                            </div>
+                            <div className="w-12 h-12 bg-red-100 rounded-full flex items-center justify-center">
+                                <FiActivity className="text-red-600" size={24} />
+                            </div>
+                        </div>
+                        <p className="text-sm text-gray-500 mt-2">
+                            {Math.round(stats.exerciseLog.totalDuration / 60)}h tập • {stats.exerciseLog.totalCalories} cal
+                        </p>
+                    </div>
+
+                    <div className="bg-white rounded-xl p-6 shadow-md">
+                        <div className="flex items-center justify-between">
+                            <div>
+                                <p className="text-gray-500 text-sm">Theo dõi giấc ngủ</p>
+                                <p className="text-3xl font-bold text-gray-800">{stats.sleepTracker.totalRecords}</p>
+                            </div>
+                            <div className="w-12 h-12 bg-indigo-100 rounded-full flex items-center justify-center">
+                                <FiMoon className="text-indigo-600" size={24} />
+                            </div>
+                        </div>
+                        <p className="text-sm text-gray-500 mt-2">TB: {stats.sleepTracker.averageSleepHours}h/đêm</p>
+                    </div>
                 </div>
             </div>
 
@@ -251,6 +324,34 @@ export default function AdminReportsPage() {
                                 <td className="px-6 py-4">0</td>
                                 <td className="px-6 py-4">0</td>
                                 <td className="px-6 py-4 font-bold text-primary-600">{stats.totalChats}</td>
+                            </tr>
+                            <tr>
+                                <td className="px-6 py-4 font-medium">Mục tiêu sức khỏe</td>
+                                <td className="px-6 py-4">-</td>
+                                <td className="px-6 py-4">-</td>
+                                <td className="px-6 py-4">-</td>
+                                <td className="px-6 py-4 font-bold text-primary-600">{stats.healthGoals.total} ({stats.healthGoals.active} đang thực hiện)</td>
+                            </tr>
+                            <tr>
+                                <td className="px-6 py-4 font-medium">Bản ghi uống nước</td>
+                                <td className="px-6 py-4">-</td>
+                                <td className="px-6 py-4">-</td>
+                                <td className="px-6 py-4">-</td>
+                                <td className="px-6 py-4 font-bold text-primary-600">{stats.waterIntake.totalRecords} ({stats.waterIntake.totalLiters}L)</td>
+                            </tr>
+                            <tr>
+                                <td className="px-6 py-4 font-medium">Bản ghi tập luyện</td>
+                                <td className="px-6 py-4">-</td>
+                                <td className="px-6 py-4">-</td>
+                                <td className="px-6 py-4">-</td>
+                                <td className="px-6 py-4 font-bold text-primary-600">{stats.exerciseLog.totalRecords} ({Math.round(stats.exerciseLog.totalDuration / 60)}h)</td>
+                            </tr>
+                            <tr>
+                                <td className="px-6 py-4 font-medium">Bản ghi giấc ngủ</td>
+                                <td className="px-6 py-4">-</td>
+                                <td className="px-6 py-4">-</td>
+                                <td className="px-6 py-4">-</td>
+                                <td className="px-6 py-4 font-bold text-primary-600">{stats.sleepTracker.totalRecords} (TB: {stats.sleepTracker.averageSleepHours}h)</td>
                             </tr>
                         </tbody>
                     </table>

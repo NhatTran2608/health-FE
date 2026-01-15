@@ -20,7 +20,11 @@ import {
     FiUsers,
     FiShield,
     FiSettings,
-    FiTrendingUp
+    FiTrendingUp,
+    FiTarget,
+    FiDroplet,
+    FiMoon,
+    FiCalendar
 } from 'react-icons/fi';
 
 // Danh sách menu cho user
@@ -28,8 +32,13 @@ const userMenuItems = [
     { href: '/dashboard', icon: FiHome, label: 'Tổng quan' },
     { href: '/profile', icon: FiUser, label: 'Hồ sơ cá nhân' },
     { href: '/health-records', icon: FiActivity, label: 'Hồ sơ sức khỏe' },
+    { href: '/health-goals', icon: FiTarget, label: 'Mục tiêu sức khỏe' },
+    { href: '/water-intake', icon: FiDroplet, label: 'Theo dõi nước uống' },
+    { href: '/exercise-log', icon: FiActivity, label: 'Nhật ký tập luyện' },
+    { href: '/sleep-tracker', icon: FiMoon, label: 'Theo dõi giấc ngủ' },
     { href: '/chatbot', icon: FiMessageSquare, label: 'Tư vấn sức khỏe' },
     { href: '/reminders', icon: FiBell, label: 'Nhắc nhở' },
+    { href: '/appointments', icon: FiCalendar, label: 'Đặt lịch khám' },
     { href: '/reports', icon: FiBarChart2, label: 'Thống kê' },
     { href: '/search', icon: FiSearch, label: 'Tìm kiếm' },
 ];
@@ -38,6 +47,8 @@ const userMenuItems = [
 const adminMenuItems = [
     { href: '/admin', icon: FiShield, label: 'Quản trị' },
     { href: '/admin/users', icon: FiUsers, label: 'Quản lý Users' },
+    { href: '/admin/doctors', icon: FiUser, label: 'Quản lý Bác sĩ' },
+    { href: '/admin/appointments', icon: FiCalendar, label: 'Quản lý Lịch hẹn' },
     { href: '/admin/reports', icon: FiTrendingUp, label: 'Báo cáo tổng thể' },
     { href: '/admin/profile', icon: FiUser, label: 'Hồ sơ cá nhân' },
     { href: '/admin/settings', icon: FiSettings, label: 'Cài đặt' },
